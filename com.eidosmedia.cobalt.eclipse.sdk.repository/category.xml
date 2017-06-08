@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/com.eidosmedia.cobalt.eclipse.sdk.feature_1.0.0.qualifier.jar" id="com.eidosmedia.cobalt.eclipse.sdk.feature" version="1.0.0.qualifier">
+      <category name="Cobalt SDK"/>
+   </feature>
+   <category-def name="Cobalt SDK" label="com.eidosmedia.cobalt.eclipse.sdk.feature">
+      <description>
+         Cobalt SDK plugin for eclipse, providing Cobalt Server
+      </description>
+   </category-def>
+</site>
