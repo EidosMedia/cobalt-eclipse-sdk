@@ -147,8 +147,6 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
             dataFolder = new File(systemDataPath);
         }
         String dataFolderPath = dataFolder.getAbsolutePath();
-        File srcFolder = new File(serverBasePath, "src");
-        String srcFolderPath = srcFolder.getAbsolutePath();
 
         String pathSepartor = File.pathSeparator;
 
@@ -165,6 +163,11 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         IFolder serverConfIFolder = server.getServerConfiguration();
         String serverConfFolderPath = serverConfIFolder.getFolder("conf").getRawLocation().toOSString();
         File serverConfFolder = new File(serverConfFolderPath);
+        String systemConfPath = environment.get("em.conf.path");
+        if (systemConfPath != null && !systemConfPath.trim().isEmpty()) {
+            serverConfFolder = new File(systemConfPath);
+            serverConfFolderPath = serverConfFolder.getAbsolutePath();
+        }
         if (!serverConfFolder.exists()) {
             CobaltSDKPlugin.warning(Messages.DefaultTitle,
                                     "Configuration folder does not exist: " + serverConfFolderPath + ".");
@@ -173,6 +176,11 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
 
         String serverSrcFolderPath = serverConfIFolder.getFolder("src").getRawLocation().toOSString();
         File serverSrcFolder = new File(serverSrcFolderPath);
+        String systemSrcPath = environment.get("em.src.path");
+        if (systemSrcPath != null && !systemSrcPath.trim().isEmpty()) {
+            serverSrcFolder = new File(systemSrcPath);
+            serverSrcFolderPath = serverSrcFolder.getAbsolutePath();
+        }
         if (!serverSrcFolder.exists()) {
             CobaltSDKPlugin.warning(Messages.DefaultTitle,
                                     "Sources folder does not exist: " + serverSrcFolderPath + ".");
