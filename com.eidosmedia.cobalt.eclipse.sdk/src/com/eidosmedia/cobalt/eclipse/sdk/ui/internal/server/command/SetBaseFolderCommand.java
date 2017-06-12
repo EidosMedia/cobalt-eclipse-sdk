@@ -17,7 +17,11 @@ public class SetBaseFolderCommand extends ServerCommand {
 
     public void execute() {
         oldBaseFolder = server.getAttribute(CobaltServer.ATTR_BASE_FOLDER, (String) null);
-        server.setAttribute(CobaltServer.ATTR_BASE_FOLDER, baseFolder);
+        if (baseFolder != null && !baseFolder.trim().isEmpty()) {
+            server.setAttribute(CobaltServer.ATTR_BASE_FOLDER, baseFolder);
+        } else {
+            server.setAttribute(CobaltServer.ATTR_BASE_FOLDER, (String) null);
+        }
     }
 
     public void undo() {

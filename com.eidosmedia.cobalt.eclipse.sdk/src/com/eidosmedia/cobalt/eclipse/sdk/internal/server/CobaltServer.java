@@ -46,6 +46,12 @@ public class CobaltServer extends ServerDelegate {
 
     public static final String ATTR_JMX_PORT = "com.eidosmedia.cobalt.eclipse.sdk.internal.server.CobaltServer.ATTR_JMX_PORT";
 
+    public static final String ATTR_DATA_PATH = CobaltServer.class.getName() + ".ATTR_DATA_PATH";
+
+    public static final String ATTR_CONF_PATH = CobaltServer.class.getName() + ".ATTR_CONF_PATH";
+
+    public static final String ATTR_SRC_PATH = CobaltServer.class.getName() + ".ATTR_SRC_PATH";
+
     public static final int DEFAULT_JMX_PORT = 9999;
 
     /**

@@ -67,7 +67,7 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
     public IPath getBaseFolderPath() {
         CobaltServer cobaltServer = getCobaltServer();
         String baseFolder = cobaltServer.getBaseFolder();
-        if (baseFolder == null) {
+        if (baseFolder == null || baseFolder.isEmpty()) {
             return getTempDirectory();
         } else {
             return new Path(baseFolder);

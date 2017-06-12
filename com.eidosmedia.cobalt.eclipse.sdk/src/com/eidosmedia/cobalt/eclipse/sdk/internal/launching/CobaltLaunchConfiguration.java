@@ -142,9 +142,9 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         String cobaltWebappsFolderPath = cobaltWebappsFolder.getAbsolutePath();
         Map<String, String> environment = configuration.getAttribute("org.eclipse.debug.core.environmentVariables",
                                                                      new java.util.HashMap<String, String>());
-        String systemDataPath = environment.get("em.data.path");
-        if (systemDataPath != null && !systemDataPath.trim().isEmpty()) {
-            dataFolder = new File(systemDataPath);
+        String serverDataPath = server.getAttribute(CobaltServer.ATTR_DATA_PATH, (String) null);
+        if (serverDataPath != null && !serverDataPath.trim().isEmpty()) {
+            dataFolder = new File(serverDataPath);
         }
         String dataFolderPath = dataFolder.getAbsolutePath();
 
@@ -163,9 +163,9 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         IFolder serverConfIFolder = server.getServerConfiguration();
         String serverConfFolderPath = serverConfIFolder.getFolder("conf").getRawLocation().toOSString();
         File serverConfFolder = new File(serverConfFolderPath);
-        String systemConfPath = environment.get("em.conf.path");
-        if (systemConfPath != null && !systemConfPath.trim().isEmpty()) {
-            serverConfFolder = new File(systemConfPath);
+        String serverConfPath = server.getAttribute(CobaltServer.ATTR_CONF_PATH, (String) null);
+        if (serverConfPath != null && !serverConfPath.trim().isEmpty()) {
+            serverConfFolder = new File(serverConfPath);
             serverConfFolderPath = serverConfFolder.getAbsolutePath();
         }
         if (!serverConfFolder.exists()) {
@@ -176,9 +176,9 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
 
         String serverSrcFolderPath = serverConfIFolder.getFolder("src").getRawLocation().toOSString();
         File serverSrcFolder = new File(serverSrcFolderPath);
-        String systemSrcPath = environment.get("em.src.path");
-        if (systemSrcPath != null && !systemSrcPath.trim().isEmpty()) {
-            serverSrcFolder = new File(systemSrcPath);
+        String serverSrcPath = server.getAttribute(CobaltServer.ATTR_SRC_PATH, (String) null);
+        if (serverSrcPath != null && !serverSrcPath.trim().isEmpty()) {
+            serverSrcFolder = new File(serverSrcPath);
             serverSrcFolderPath = serverSrcFolder.getAbsolutePath();
         }
         if (!serverSrcFolder.exists()) {
