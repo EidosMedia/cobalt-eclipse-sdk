@@ -138,8 +138,10 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         File tmpFolder = new File(serverBasePath, "temp");
         String tmpFolderPath = tmpFolder.getAbsolutePath();
         File dataFolder = new File(serverBasePath, "data");
-        File cobaltWebappsFolder = new File(serverBasePath, "www/cobaltwebapps");
+        File cobaltWebappsFolder = cobaltServer.getWebappsFolder();
         String cobaltWebappsFolderPath = cobaltWebappsFolder.getAbsolutePath();
+        File cobaltWebfragmentsFolder = cobaltServer.getWebfragmentsFolder();
+        String cobaltWebfragmentsFolderPath = cobaltWebfragmentsFolder.getAbsolutePath();
         Map<String, String> environment = configuration.getAttribute("org.eclipse.debug.core.environmentVariables",
                                                                      new java.util.HashMap<String, String>());
         String serverDataPath = server.getAttribute(CobaltServer.ATTR_DATA_PATH, (String) null);
@@ -324,6 +326,7 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         vmArgs = appendVMArg(vmArgs, "-Dem.conf.common=\"" + commonPropertiesPath + "\"", "-Dem.conf.common=");
         vmArgs = appendVMArg(vmArgs, "-Dem.data.path=\"" + dataFolderPath + "\"", "-Dem.data.path=");
         vmArgs = appendVMArg(vmArgs, "-Dcobalt.webapps=\"" + cobaltWebappsFolderPath + "\"", "-Dcobalt.webapps=");
+        vmArgs = appendVMArg(vmArgs, "-Dcobalt.webfragments=\"" + cobaltWebfragmentsFolderPath + "\"", "-Dcobalt.webfragments=");
         vmArgs = appendVMArg(vmArgs, "-Dem.src.path=\"" + serverSrcFolderPath + "\"", "-Dem.src.path=");
         vmArgs = appendVMArg(vmArgs, "-Dem.work.path=\"" + workFolderPath + "\"", "-Dem.work.path=");
         vmArgs = appendVMArg(vmArgs, "-Dcobalt.version=\"" + cobaltVersion + "\"", "-Dcobalt.version=");

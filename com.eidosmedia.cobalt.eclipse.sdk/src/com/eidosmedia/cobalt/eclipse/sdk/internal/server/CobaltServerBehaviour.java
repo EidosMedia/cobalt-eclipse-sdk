@@ -1,6 +1,7 @@
 package com.eidosmedia.cobalt.eclipse.sdk.internal.server;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,7 @@ import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.debug.core.model.IProcess;
 import org.eclipse.debug.ui.IDebugUIConstants;
+import org.eclipse.jst.j2ee.project.facet.IJ2EEFacetConstants;
 import org.eclipse.wst.server.core.IModule;
 import org.eclipse.wst.server.core.IRuntime;
 import org.eclipse.wst.server.core.IServer;
@@ -72,6 +74,14 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
         } else {
             return new Path(baseFolder);
         }
+    }
+
+    public File getWebappsFolder() {
+        return new File(getBaseFolderPath().toOSString(), "www/cobaltwebapps");
+    }
+
+    public File getWebfragmentsFolder() {
+        return new File(getBaseFolderPath().toOSString(), "www/cobaltwebfragments");
     }
 
     /**
@@ -147,6 +157,7 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
     @Override
     protected void publishModule(int kind, int deltaKind, IModule[] moduleTree, IProgressMonitor monitor) throws CoreException {
         super.publishModule(kind, deltaKind, moduleTree, monitor);
+
         /* 
          * NOTES
          * 
@@ -172,13 +183,15 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
          */
 
         try {
+            String id = moduleTree[0].getModuleType().getId();
             String moduleName = moduleTree[0].getName();
 //            String moduleDocBase = "${cobalt.base}/www/wtpwebapps/" + moduleName;
 //            String webBaseDocBase = "${cobalt.home}/lib/modules/web-base-${cobalt.version}";
             IPath cobaltBaseIPath = getBaseFolderPath();
             File cobaltBase = new File(cobaltBaseIPath.toOSString()).getCanonicalFile();
             File cobaltTemp = new File(cobaltBase, "temp");
-            File cobaltWebapps = new File(cobaltBase, "www/cobaltwebapps");
+            File cobaltWebapps = getWebappsFolder();
+            File cobaltWebfragments = getWebfragmentsFolder();
 
 //            IFolder confFolder = getServer().getServerConfiguration();
 //            IFile serverXml = confFolder.getFile("server.xml");
@@ -189,7 +202,11 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
 //            String content = new String(Files.readAllBytes(serverXmlPath), StandardCharsets.UTF_8);
 
             if (deltaKind == ServerBehaviourDelegate.REMOVED) {
-                PublishHelper.deleteDirectory(new File(cobaltWebapps, moduleName), monitor);
+                if (id.equals(IJ2EEFacetConstants.DYNAMIC_WEB)) {
+                    PublishHelper.deleteDirectory(new File(cobaltWebapps, moduleName), monitor);
+                } else if (id.equals(IJ2EEFacetConstants.WEBFRAGMENT)){
+                    PublishHelper.deleteDirectory(new File(cobaltWebfragments, moduleName), monitor);
+                }
                 //content = content.replace(moduleDocBase, webBaseDocBase);
                 //Files.write(serverXmlPath, content.getBytes(StandardCharsets.UTF_8));
             } else {
@@ -197,27 +214,65 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
 //                    content = content.replace(webBaseDocBase, moduleDocBase);
 //                    Files.write(serverXmlPath, content.getBytes(StandardCharsets.UTF_8));
 //                }
-
-                if (!cobaltWebapps.exists()) {
-                    cobaltWebapps.mkdir();
-                }
-                IPath cobaltWebappsIPath = new Path(cobaltWebapps.getCanonicalPath());
-                IPath deployIPath = cobaltWebappsIPath.append(moduleName);
-
                 PublishHelper helper = new PublishHelper(cobaltTemp);
-
-                // TODO List<IStatus> status = new ArrayList<IStatus>();
-                if (kind == IServer.PUBLISH_CLEAN || kind == IServer.PUBLISH_FULL) {
-                    IModuleResource[] mr = getResources(moduleTree);
-                    IStatus[] stat = helper.publishFull(mr, deployIPath, monitor);
-                    // TODO addArrayToList(status, stat);
-                } else {
-                    IModuleResourceDelta[] delta = getPublishedResourceDelta(moduleTree);
-                    int size = delta.length;
-                    for (int i = 0; i < size; i++) {
-                        IStatus[] stat = helper.publishDelta(delta[i], deployIPath, monitor);
-                        // TODO addArrayToList(status, stat);
+                if (id.equals(IJ2EEFacetConstants.DYNAMIC_WEB)) {
+                    if (!cobaltWebapps.exists()) {
+                        cobaltWebapps.mkdir();
                     }
+                    IPath cobaltWebappsIPath = new Path(cobaltWebapps.getCanonicalPath());
+                    IPath deployIPath = cobaltWebappsIPath.append(moduleName);
+
+                    // TODO List<IStatus> status = new ArrayList<IStatus>();
+                    if (kind == IServer.PUBLISH_CLEAN || kind == IServer.PUBLISH_FULL) {
+                        IModuleResource[] mr = getResources(moduleTree);
+                        IStatus[] stat = helper.publishFull(mr, deployIPath, monitor);
+                        // TODO addArrayToList(status, stat);
+                    } else {
+                        IModuleResourceDelta[] delta = getPublishedResourceDelta(moduleTree);
+                        int size = delta.length;
+                        for (int i = 0; i < size; i++) {
+                            IStatus[] stat = helper.publishDelta(delta[i], deployIPath, monitor);
+                            // TODO addArrayToList(status, stat);
+                        }
+                    }
+                } else if (id.equals(IJ2EEFacetConstants.WEBFRAGMENT)){
+                    IProject project = moduleTree[0].getProject();
+                    if (!cobaltWebfragments.exists()) {
+                        cobaltWebfragments.mkdirs();
+                    }
+                    //it is a web-fragment for the web-base
+                    IModuleResource[] mr = getResources(moduleTree);
+                    IPath cobaltWebbaseExtensionsIPath = new Path(cobaltWebfragments.getCanonicalPath());
+
+                    //sync libraries
+                    FileSystemSyncExecutor syncExecutor = new FileSystemSyncExecutor();
+                    IFolder folder = project.getFolder("target").getFolder("dependency");
+                    File dependencies = Paths.get(folder.getLocationURI()).toFile();
+                    syncExecutor.sync(dependencies, new File(cobaltWebfragments, moduleName), monitor);
+
+                    //publish jar
+                    IPath deployIpath = cobaltWebbaseExtensionsIPath.append(moduleName).append(moduleName).addFileExtension("jar");
+                    helper.publishZip(mr, deployIpath, monitor);
+
+                    //ALTERNATIVE METHOD
+//                    IJavaProject create = JavaCore.create(moduleTree[0].getProject());
+//                    IClasspathEntry[] resolvedClasspath = create.getResolvedClasspath(true);
+//                    Set<IClasspathEntry> pomCompileEntries = new HashSet<>();
+//                    for (IClasspathEntry iClasspathEntry : resolvedClasspath) {
+//                        if (iClasspathEntry.getEntryKind() == IClasspathEntry.CPE_LIBRARY) {
+//                            IClasspathAttribute[] extraAttributes = iClasspathEntry.getExtraAttributes();
+//                            for (IClasspathAttribute iClasspathAttribute : extraAttributes) {
+//                                if ("maven.scope".equals(iClasspathAttribute.getName()) && "compile".equals(iClasspathAttribute.getValue())) {
+//                                    pomCompileEntries.add(iClasspathEntry);
+//                                }
+//                            }
+//                        }
+//                    }
+//                    for (IClasspathEntry iClasspathEntry : pomCompileEntries) {
+//                        java.nio.file.Path sourceLibPath = iClasspathEntry.getPath().toFile().toPath();
+//                        java.nio.file.Path destinationLibPath = cobaltWebbaseExtensionsIPath.toFile().toPath().resolve(sourceLibPath.getFileName());
+//                        Files.copy(sourceLibPath, destinationLibPath, StandardCopyOption.REPLACE_EXISTING);
+//                    }
                 }
             }
 
