@@ -113,7 +113,6 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
         try {
             IServer server = getServer();
             IRuntime runtime = server.getRuntime();
-            CobaltServer cobaltServer = getCobaltServer();
 
             IPath cobaltHomeIPath = runtime.getLocation();
             IPath cobaltBaseIPath = getBaseFolderPath();
@@ -225,13 +224,13 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
                     // TODO List<IStatus> status = new ArrayList<IStatus>();
                     if (kind == IServer.PUBLISH_CLEAN || kind == IServer.PUBLISH_FULL) {
                         IModuleResource[] mr = getResources(moduleTree);
-                        IStatus[] stat = helper.publishFull(mr, deployIPath, monitor);
+                        /*IStatus[] stat = */helper.publishFull(mr, deployIPath, monitor);
                         // TODO addArrayToList(status, stat);
                     } else {
                         IModuleResourceDelta[] delta = getPublishedResourceDelta(moduleTree);
                         int size = delta.length;
                         for (int i = 0; i < size; i++) {
-                            IStatus[] stat = helper.publishDelta(delta[i], deployIPath, monitor);
+                            /*IStatus[] stat = */helper.publishDelta(delta[i], deployIPath, monitor);
                             // TODO addArrayToList(status, stat);
                         }
                     }
@@ -245,10 +244,15 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
                     IPath cobaltWebbaseExtensionsIPath = new Path(cobaltWebfragments.getCanonicalPath());
 
                     //sync libraries
-                    FileSystemSyncExecutor syncExecutor = new FileSystemSyncExecutor();
-                    IFolder folder = project.getFolder("target").getFolder("dependency");
-                    File dependencies = Paths.get(folder.getLocationURI()).toFile();
-                    syncExecutor.sync(dependencies, new File(cobaltWebfragments, moduleName), monitor);
+                    IFolder targetFolder = project.getFolder("target");
+                    if (targetFolder != null && targetFolder.exists()) {
+                        IFolder dependencyFolder = targetFolder.getFolder("dependency");
+                        if (dependencyFolder != null && dependencyFolder.exists()) {
+                            File dependencies = Paths.get(dependencyFolder.getLocationURI()).toFile();
+                            FileSystemSyncExecutor syncExecutor = new FileSystemSyncExecutor();
+                            syncExecutor.sync(dependencies, new File(cobaltWebfragments, moduleName), monitor);
+                        }
+                    }
 
                     //publish jar
                     IPath deployIpath = cobaltWebbaseExtensionsIPath.append(moduleName).append(moduleName).addFileExtension("jar");
