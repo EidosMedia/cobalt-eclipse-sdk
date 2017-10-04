@@ -204,14 +204,28 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         try {
             cobaltProperties.load(new FileInputStream(commonPropertiesFolder));
         } catch (FileNotFoundException e) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Error reading cobalt.properties file: cobalt.properties.");
+            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Error reading file: cobalt.properties.");
             return;
         } catch (IOException e) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Error reading cobalt.properties file: cobalt.properties.");
+            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Error reading file: cobalt.properties.");
             return;
         }
 
-        String cobaltVersion = cobaltProperties.getProperty("cobalt.version");
+        File buildPropertiesFile = new File(cobaltHome, "bin/build.properties");
+        
+        Properties buildProperties = new Properties();
+
+        try {
+            buildProperties.load(new FileInputStream(buildPropertiesFile));
+        } catch (FileNotFoundException e) {
+            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Error reading file: build.properties.");
+            return;
+        } catch (IOException e) {
+            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Error reading file: build.properties.");
+            return;
+        }
+        
+        String cobaltVersion = buildProperties.getProperty("build.version");
         String servicesPath =
             libFolderPath + "/services/" + pathSepartor + libFolderPath + "/modules/services-" + cobaltVersion + ".jar";
 
