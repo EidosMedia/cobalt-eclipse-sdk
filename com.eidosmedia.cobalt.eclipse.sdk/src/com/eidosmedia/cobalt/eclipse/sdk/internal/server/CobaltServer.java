@@ -190,6 +190,9 @@ public class CobaltServer extends ServerDelegate {
             if ("maven.web-fragment.pom".equals(p.getArtifactId())) {
                 String contextFilePath = "conf/Catalina/localhost/ROOT.xml";
                 updateContextForWebFragment(monitor, serverConfiguration, iModule, contextFilePath, remove);
+            } else if ("maven.users.module.pom".equals(p.getArtifactId())) {
+                String contextFilePath = "conf/Catalina/localhost/directory.xml";
+                updateContextForWebFragment(monitor, serverConfiguration, iModule, contextFilePath, remove);
             }
         }
         
