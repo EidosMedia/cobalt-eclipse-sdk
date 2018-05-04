@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -13,9 +16,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Stream;
 
+import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
@@ -59,6 +65,10 @@ import com.eidosmedia.cobalt.eclipse.sdk.internal.server.ICobaltRuntime;
 import com.eidosmedia.cobalt.eclipse.sdk.internal.util.ClasspathBuilder;
 
 public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDelegate {
+
+    private static final String OS = System.getProperty("os.name").toLowerCase();
+
+    public static final ComparableVersion V_2_7_0_SNAPSHOT = new ComparableVersion("2.7.0-SNAPSHOT");
 
     public static final String ATTR_CONFIGURATION_FOLDER =
         "com.eidosmedia.cobalt.eclipse.sdk.launching.ATTR_CONFIGURATION_FOLDER";
@@ -226,6 +236,11 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         }
         
         String cobaltVersion = buildProperties.getProperty("build.version");
+        if (new ComparableVersion(cobaltVersion).compareTo(V_2_7_0_SNAPSHOT) >= 0) {
+            String elasticVersion = cobaltProperties.getProperty("repository.search.elastic.version", "54");
+            String elasticClassesPath = libFolderPath + "/es" + elasticVersion;
+            reposPath = reposPath + pathSepartor + elasticClassesPath;
+        }
         String servicesPath =
             libFolderPath + "/services/" + pathSepartor + libFolderPath + "/modules/services-" + cobaltVersion + ".jar";
 
@@ -366,7 +381,7 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         //            vmArgs = appendVMArg(vmArgs, "-Dtomcat.port.redirect=\"8443\"", "-Dtomcat.port.redirect=");
 
         vmArgs = appendVMArg(vmArgs, "-Dem.services.loader=\"" + servicesPath + "\"", "-Dem.services.loader=");
-        vmArgs = appendVMArg(vmArgs, "-Ddebug.custom.loader=\"" + reposPath + "\"", "-Ddebug.custom.loader=");
+        vmArgs = appendVMArg(vmArgs, "-Dem.repository.loader=\"" + reposPath + "\"", "-Dem.repository.loader=");
 
         // TODO -Dorg.apache.el.parser.SKIP_IDENTIFIER_CHECK=true
 
@@ -766,39 +781,56 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
 
     private String[] setEnvironment(String[] envp, String basePath) {
         String os = Platform.getOS();
-        String imageToolPath = basePath + "/tools/imgtool-5.3.4-";
-        if (os.equals(Platform.OS_WIN32)) {
-            imageToolPath += "Windows";
-        } else if (os.equals(Platform.OS_MACOSX)) {
-            imageToolPath += "Darwin";
-        } else if (os.equals(Platform.OS_LINUX)) {
-            imageToolPath += "Linux64-rh5";
+        String imageToolPath = basePath + "/tools/";
+        final String pathSuffix;
+        LinkedHashMap<String, String> vars = new LinkedHashMap<String, String>();
+        if (OS.indexOf("win") >= 0) {
+            pathSuffix = "Windows";
+        } else if (OS.indexOf("mac") >= 0) {
+            pathSuffix = "Darwin";
+        } else if (OS.indexOf("nix") >= 0 || OS.indexOf("nux") >= 0 || OS.indexOf("aix") > 0) {
+            pathSuffix = "Linux64-rh5";
+        } else {
+            pathSuffix = null;
         }
-        try {
-            File imageToolFile = new File(imageToolPath + "/imgtool");
-            if (imageToolFile.exists()) {
-                imageToolFile.setExecutable(true, false);
+        if (pathSuffix != null) {
+            Path imageToolOSPath = null;
+            try (Stream<Path> stream =
+                Files.find(Paths.get(imageToolPath), 1,
+                           (path, attr) -> String.valueOf(path).endsWith(pathSuffix) && attr.isDirectory())) {
+                Optional<Path> first = stream.findFirst();
+                imageToolOSPath = first.orElse(null);
+            } catch (IOException ex) {
+                Logger.log(Logger.ERROR, "Can't find imagetool for " + pathSuffix, ex);
+                imageToolOSPath = null;
             }
-        } catch (Exception ex) {
-            Logger.log(Logger.ERROR, "Unable to set execution permission on imgtool", ex);
+            if (imageToolOSPath != null) {
+                try {
+                    File imageToolFile = imageToolOSPath.resolve("imgtool").toFile();
+                    if (imageToolFile.exists()) {
+                        imageToolFile.setExecutable(true, false);
+                    }
+                } catch (Exception ex) {
+                    Logger.log(Logger.ERROR, "Unable to set execution permission on imgtool", ex);
+                }
+                if (envp != null) {
+                    for (String str : envp) {
+                        String[] var = str.split("=");
+                        vars.put(var[0], var[1]);
+                    }
+                }
+                String path = vars.get("PATH");
+                if (path == null) {
+                    path = System.getenv("PATH");
+                }
+                if (path == null) {
+                    vars.put("PATH", imageToolOSPath.toString());
+                } else {
+                    vars.put("PATH", path + ":" + imageToolOSPath.toString());
+                }
+            }
         }
 
-        LinkedHashMap<String, String> vars = new LinkedHashMap<String, String>();
-        if (envp != null) {
-            for (String str : envp) {
-                String[] var = str.split("=");
-                vars.put(var[0], var[1]);
-            }
-        }
-        String path = vars.get("PATH");
-        if (path == null) {
-            path = System.getenv("PATH");
-        }
-        if (path == null) {
-            vars.put("PATH", imageToolPath);
-        } else {
-            vars.put("PATH", path + ":" + imageToolPath);
-        }
         String lang = vars.get("LANG");
         if (lang == null && !os.equals(Platform.OS_WIN32)) {
             String locale = Locale.US.toString();
