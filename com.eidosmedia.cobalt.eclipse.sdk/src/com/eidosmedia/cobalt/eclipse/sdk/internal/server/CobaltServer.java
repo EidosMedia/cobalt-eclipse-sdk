@@ -187,12 +187,11 @@ public class CobaltServer extends ServerDelegate {
         IMavenProjectFacade facade = projectRegistry.getProject(project);
         if (facade != null) {
             MavenProject p = facade.getMavenProject().getParent();
-            if ("maven.web-fragment.pom".equals(p.getArtifactId())) {
-                String contextFilePath = "conf/Catalina/localhost/ROOT.xml";
-                updateContextForWebFragment(monitor, serverConfiguration, iModule, contextFilePath, remove);
-            } else if ("maven.users.module.pom".equals(p.getArtifactId())) {
-                String contextFilePath = "conf/Catalina/localhost/directory.xml";
-                updateContextForWebFragment(monitor, serverConfiguration, iModule, contextFilePath, remove);
+            String artifactId = p.getArtifactId();
+            if ("maven.web-fragment.pom".equals(artifactId) || "archetype.web-base.extensions.pom".equals(artifactId)) {
+                updateContextForWebFragment(monitor, serverConfiguration, iModule, "conf/Catalina/localhost/ROOT.xml", remove);
+            } else if ("maven.users.module.pom".equals(artifactId) || "archetype.directory.extensions.pom".equals(artifactId)) {
+                updateContextForWebFragment(monitor, serverConfiguration, iModule, "conf/Catalina/localhost/directory.xml", remove);
             }
         }
         
