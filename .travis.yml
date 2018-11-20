@@ -4,8 +4,16 @@ cache:
   directories:
   - $HOME/.m2
 
-script:
-  - git clone https://$GITHUB_TOKEN@github.com/EidosMedia/eidosmedia.github.io.git
-  - rm -rf eidosmedia.github.io/cobalt-eclipse-sdk
-  - unzip -d eidosmedia.github.io/cobalt-eclipse-sdk com.eidosmedia.cobalt.eclipse.sdk.repository/target/com.eidosmedia.cobalt.eclipse.sdk.repository-*.zip
-  - cd eidosmedia.github.io && git add --all && git commit -a -m "Update Cobalt Eclipse SDK update site" && git push origin master
+install: true
+
+script: mvn package -B
+  
+deploy:
+  - provider: script
+    script: 
+      - git clone https://$GITHUB_TOKEN@github.com/EidosMedia/eidosmedia.github.io.git
+      - rm -rf eidosmedia.github.io/cobalt-eclipse-sdk
+      - unzip -d eidosmedia.github.io/cobalt-eclipse-sdk com.eidosmedia.cobalt.eclipse.sdk.repository/target/com.eidosmedia.cobalt.eclipse.sdk.repository-*.zip
+      - cd eidosmedia.github.io && git add --all && git commit -a -m "Update Cobalt Eclipse SDK update site" && git push origin master
+    on:
+      branch: master
