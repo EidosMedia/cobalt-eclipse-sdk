@@ -1,5 +1,9 @@
 language: java
 
+cache:
+  directories:
+  - $HOME/.m2
+
 script:
   - mvn package -B
   - unzip -d cobalt-eclipse-sdk com.eidosmedia.cobalt.eclipse.sdk.repository/target/com.eidosmedia.cobalt.eclipse.sdk.repository-*.zip
@@ -11,5 +15,5 @@ deploy:
   github_token: $GITHUB_TOKEN
   on:
     branch: master
-  repo: EidosMedia/eidosmedia.github.io
-  target_branch: master
+  repo: EidosMedia/eidosmedia.github.io/cobalt-eclipse-sdk
+ #target_branch: master
