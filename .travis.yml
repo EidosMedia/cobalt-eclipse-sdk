@@ -6,14 +6,16 @@ cache:
 
 script:
   - mvn package -B
-  - unzip -d cobalt-eclipse-sdk com.eidosmedia.cobalt.eclipse.sdk.repository/target/com.eidosmedia.cobalt.eclipse.sdk.repository-*.zip
+  - mkdir deploy
+  - unzip -d deploy/cobalt-eclipse-sdk com.eidosmedia.cobalt.eclipse.sdk.repository/target/com.eidosmedia.cobalt.eclipse.sdk.repository-*.zip
 
 deploy:
   provider: pages
   skip_cleanup: true
-  local_dir: cobalt-eclipse-sdk
+  local_dir: deploy
   github_token: $GITHUB_TOKEN
+  keep-history: true
   on:
     branch: master
-  repo: EidosMedia/eidosmedia.github.io/cobalt-eclipse-sdk
- #target_branch: master
+  repo: EidosMedia/eidosmedia.github.io
+  target_branch: master
