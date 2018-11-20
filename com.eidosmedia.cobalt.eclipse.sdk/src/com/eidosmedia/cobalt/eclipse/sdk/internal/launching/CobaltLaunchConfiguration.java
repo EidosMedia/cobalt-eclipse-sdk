@@ -23,22 +23,17 @@ import java.util.stream.Stream;
 
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Platform;
-import org.eclipse.core.variables.IStringVariableManager;
-import org.eclipse.core.variables.VariablesPlugin;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.debug.core.sourcelookup.ISourceContainer;
 import org.eclipse.debug.core.sourcelookup.ISourceLookupDirector;
-import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
@@ -62,7 +57,6 @@ import com.eidosmedia.cobalt.eclipse.sdk.internal.server.CobaltRuntimeConfigurat
 import com.eidosmedia.cobalt.eclipse.sdk.internal.server.CobaltServer;
 import com.eidosmedia.cobalt.eclipse.sdk.internal.server.CobaltServerBehaviour;
 import com.eidosmedia.cobalt.eclipse.sdk.internal.server.ICobaltRuntime;
-import com.eidosmedia.cobalt.eclipse.sdk.internal.util.ClasspathBuilder;
 
 public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDelegate {
 
@@ -79,20 +73,8 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         "com.eidosmedia.cobalt.eclipse.sdk.launching.ATTR_COBALT_SHUTDOWN";
 
     @Override
-    public boolean preLaunchCheck(ILaunchConfiguration configuration, String mode, IProgressMonitor monitor)
-        throws CoreException {
-
-        IResource[] resources = configuration.getMappedResources();
-        return super.preLaunchCheck(configuration, mode, monitor);
-    }
-
-    @Override
     public void launch(ILaunchConfiguration configuration, String launchMode, ILaunch launch, IProgressMonitor monitor)
         throws CoreException {
-
-        IWorkspace workspace = ResourcesPlugin.getWorkspace();
-        IWorkspaceRoot root = workspace.getRoot();
-        IStringVariableManager variableManager = VariablesPlugin.getDefault().getStringVariableManager();
 
         // Eval server configuration
 
@@ -152,8 +134,6 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         String cobaltWebappsFolderPath = cobaltWebappsFolder.getAbsolutePath();
         File cobaltWebfragmentsFolder = cobaltServer.getWebfragmentsFolder();
         String cobaltWebfragmentsFolderPath = cobaltWebfragmentsFolder.getAbsolutePath();
-        Map<String, String> environment = configuration.getAttribute("org.eclipse.debug.core.environmentVariables",
-                                                                     new java.util.HashMap<String, String>());
         String serverDataPath = server.getAttribute(CobaltServer.ATTR_DATA_PATH, (String) null);
         if (serverDataPath != null && !serverDataPath.trim().isEmpty()) {
             dataFolder = new File(serverDataPath);
@@ -454,7 +434,7 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
 
         cobaltServer.setupLaunch(launch, launchMode, monitor);
         try {
-            runner.run(runConfig, launch, null);
+            runner.run(runConfig, launch, monitor);
             cobaltServer.addProcessListener(launch.getProcesses()[0]);
         } catch (Exception ex) {
             Logger.log(Logger.ERROR, "Starting Cobalt server error", ex);
@@ -467,315 +447,6 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
             return "\"" + path + "\"";
         } else {
             return path;
-        }
-    }
-
-    private void launchOld(ILaunchConfiguration configuration,
-                           String launchMode,
-                           ILaunch launch,
-                           IProgressMonitor monitor)
-        throws CoreException {
-
-        IWorkspace workspace = ResourcesPlugin.getWorkspace();
-        IWorkspaceRoot root = workspace.getRoot();
-
-        // Find server
-        String serverId = configuration.getAttribute("server-id", (String) null);
-        IServer server = null;
-        CobaltServerBehaviour cobaltServer = null;
-        if (serverId != null)
-            server = ServerCore.findServer(serverId);
-
-        IRuntime runtime = server.getRuntime();
-        ICobaltRuntime cobaltRuntime = (ICobaltRuntime) runtime.loadAdapter(ICobaltRuntime.class, null);
-        if (cobaltRuntime == null) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Invalid Cobalt runtime.");
-            return;
-        }
-
-        boolean isDevWorkspace = cobaltRuntime.isDevWorkspace();
-        if (isDevWorkspace) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Launch Cobalt not enabled in developing workspace.");
-            return;
-        }
-
-        if (server != null) {
-            cobaltServer = (CobaltServerBehaviour) server.loadAdapter(CobaltServerBehaviour.class, null);
-        }
-
-        String runtimePath = runtime.getLocation().toOSString();
-        if (runtimePath == null || runtimePath.isEmpty()) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Cobalt SDK not configured.");
-            return;
-        }
-
-        File workFolder = new File(runtimePath);
-        final String workFolderPath = workFolder.getAbsolutePath();
-        if (!workFolder.exists()) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Cobalt SDK folder does not exist: " + workFolderPath + ".");
-            return;
-        }
-
-        CobaltRuntimeConfigurationData runtimeConfigurationData;
-        try {
-            runtimeConfigurationData = cobaltRuntime.getConfigurationData();
-        } catch (Exception ex) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle, "Eval Cobalt runtime configuration data error: " + ex);
-            return;
-        }
-
-        // Eval folders path: configuration, work
-        IStringVariableManager variableManager = VariablesPlugin.getDefault().getStringVariableManager();
-        String confFolderExpr = configuration.getAttribute(ATTR_CONFIGURATION_FOLDER, "");
-        final String confFolderPath = variableManager.performStringSubstitution(confFolderExpr);
-        File confFolder = new File(confFolderPath);
-        if (!confFolder.exists()) {
-            CobaltSDKPlugin.warning(Messages.DefaultTitle,
-                                    "Cobalt configuration folder does not exist: " + confFolderPath + ".");
-            return;
-        }
-
-        // Classpath
-        List<String> classpathList = new ArrayList<String>();
-        // FIXME String[] userClasspath = getUserClasspath(configuration);
-        File binFolder = new File(runtimePath, "bin"); //$NON-NLS-1$
-        for (File jar : binFolder.listFiles()) {
-            if (jar.getName().toLowerCase().endsWith(".jar"))
-                classpathList.add(jar.getAbsolutePath());
-        }
-
-        List<ISourceContainer> sourceContainers = new ArrayList<ISourceContainer>();
-        String vmArgs = null;
-        String pgmArgs = "-config \"" + confFolderPath + File.separator + "server.xml\" ";
-
-        boolean stopServer = configuration.getAttribute(ATTR_COBALT_SHUTDOWN, false);
-        if (stopServer) {
-
-            vmArgs = "";
-            pgmArgs += "stop";
-
-        } else {
-
-            // Classpath
-            // FIXME classpathList.add(runtimeConfigurationData.getEomProtocolsPath());
-            classpathList.add(confFolderPath);
-
-            // Tomcat catalina.policy 
-            String catalinaPolicyPath = null;
-            File catalinaPolicy = new File(confFolderPath, "catalina.policy");
-            if (catalinaPolicy.exists())
-                catalinaPolicyPath = catalinaPolicy.getAbsolutePath();
-
-            // Tomcat logging.properties
-            String loggingPropertiesPath = null;
-            File loggingProperties = new File(confFolderPath, "logging.properties");
-            if (!loggingProperties.exists())
-                loggingProperties = new File(runtimePath, "conf/logging.properties");
-            if (loggingProperties.exists())
-                loggingPropertiesPath = loggingProperties.getAbsolutePath();
-
-            // Cobalt extensions folder and source containers
-            ClasspathBuilder cobaltExtensions = new ClasspathBuilder();
-
-            // Collect extension projects			
-            List<String> extensionsProjects = new ArrayList<String>();
-            if (cobaltServer != null) {
-                extensionsProjects = cobaltServer.getAllExtensionProjects();
-            } else {
-                String projectName =
-                    configuration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, (String) null);
-                if (projectName != null)
-                    extensionsProjects.add(projectName);
-            }
-
-            try {
-                IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
-                IJavaModel javaModel = JavaCore.create(workspaceRoot);
-
-                for (String projectName : extensionsProjects) {
-
-                    // FIXME use com.eidosmedia.cobalt.eclipse.sdk.internal.util.ProjectUtils.getOutputLocations(IJavaProject)					
-                    IJavaProject javaProject = javaModel.getJavaProject(projectName);
-                    IPath outputLocation = javaProject.getOutputLocation();
-                    IFolder outputFolder = workspaceRoot.getFolder(outputLocation);
-                    String projectBinPath = outputFolder.getLocation().toFile().getCanonicalPath();
-
-                    cobaltExtensions.appendPath(projectBinPath);
-
-                    IClasspathEntry[] classpathEntries = javaProject.getResolvedClasspath(true);
-                    for (IClasspathEntry entry : classpathEntries) {
-                        if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
-                            IPath path = entry.getOutputLocation();
-                            if (path != null) {
-                                IFolder folder = workspaceRoot.getFolder(path);
-                                String binPath = folder.getLocation().toFile().getCanonicalPath();
-                                cobaltExtensions.appendPath(binPath);
-                            }
-                        }
-                    }
-
-                    JavaProjectSourceContainer sourceContainer = new JavaProjectSourceContainer(javaProject);
-                    sourceContainers.add(sourceContainer);
-
-                    IClasspathEntry[] rawEntries = javaProject.getRawClasspath();
-                    for (IClasspathEntry entry : rawEntries) {
-                        if (entry.getEntryKind() == IClasspathEntry.CPE_LIBRARY) {
-                            IPath path = entry.getPath();
-                            if (path != null) {
-                                // System.out.println(path + " > " + JavaCore.getReferencedClasspathEntries(entry, javaProject).length);
-                                try {
-                                    cobaltExtensions.appendPath(root.getFile(entry.getPath())
-                                            .getLocation()
-                                            .toFile()
-                                            .getCanonicalPath());
-                                } catch (Exception ex) {
-                                    // FIXME catch proper exception before try to acquire path of external jars
-                                    try {
-                                        File file = entry.getPath().toFile();
-                                        if (file.exists()) {
-                                            cobaltExtensions.appendPath(file.getCanonicalPath());
-                                        } else {
-                                            // FIXME log exception
-                                        }
-                                    } catch (Exception ex2) {
-                                        // FIXME log exception
-                                    }
-                                }
-                            }
-                        } else {
-                            // TODO resolve other kinds
-                        }
-                    }
-                }
-
-            } catch (final Exception ex) {
-                String message = "Build extensions classpath error";
-                Logger.log(Logger.ERROR, message, ex);
-                CobaltSDKPlugin.warning(Messages.DefaultTitle, message + ".\n" + ex);
-                return;
-            }
-
-            // Temp folder
-            File tmpFolder = new File(runtimePath, "temp");
-            String tmpFolderPath = tmpFolder.getAbsolutePath();
-            String catalinaBase = runtimeConfigurationData.getCatalinaBasePath();
-
-            // Program & VM args
-            vmArgs = removeCRLF(getVMArguments(configuration));
-            vmArgs = appendVMArg(vmArgs, "-server", "-server");
-            // vmArgs = appendVMArg(vmArgs, "-Dfile.encoding=\"UTF-8\"", "-Dfile.encoding=");			
-            vmArgs = appendVMArg(vmArgs, "-Djava.endorsed.dirs=\"endorsed\"", "-Djava.endorsed.dirs=");
-            vmArgs = appendVMArg(vmArgs, "-XX:MaxPermSize=256m", "-XX:MaxPermSize=");
-            vmArgs = appendVMArg(vmArgs, "-Xms512m", "-Xms\\d+[kKmM]?");
-            vmArgs = appendVMArg(vmArgs, "-Xmx512m", "-Xmx\\d+[kKmM]?");
-            vmArgs = appendVMArg(vmArgs, "-Djava.net.preferIPv4Stack=true", "-Djava.net.preferIPv4Stack=");
-            vmArgs = appendVMArg(vmArgs, "-Djava.awt.headless=true", "-Djava.awt.headless=");
-            if (catalinaPolicyPath != null) {
-                vmArgs = appendVMArg(vmArgs, "-Djava.security.manager", "-Djava.security.manager");
-                vmArgs = appendVMArg(vmArgs, "-Djava.security.policy=\"" + catalinaPolicyPath + "\"",
-                                     "-Djava.security.policy=");
-            }
-            if (loggingPropertiesPath != null) {
-                vmArgs = appendVMArg(vmArgs, "-Djava.util.logging.config.file=\"" + loggingPropertiesPath + "\"",
-                                     "-Djava.util.logging.config.file=");
-                vmArgs = appendVMArg(vmArgs, "-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager",
-                                     "-Djava.util.logging.manager=");
-            }
-            vmArgs = appendVMArg(vmArgs, "-Dportal.config=\"" + confFolderPath + "\"", "-Dportal.config=");
-            if (!cobaltExtensions.isEmpty())
-                vmArgs =
-                    appendVMArg(vmArgs, "-Dportal.extensions=\"" + cobaltExtensions + "\"", "-Dportal.extensions=");
-            vmArgs = appendVMArg(vmArgs, "-Dcatalina.home=\"" + runtimePath + "\"", "-Dcatalina.home=");
-            vmArgs = appendVMArg(vmArgs, "-Dcatalina.base=\"" + catalinaBase + "\"", "-Dcatalina.base=");
-            vmArgs = appendVMArg(vmArgs, "-Dcatalina.tmpdir=\"" + tmpFolderPath + "\"", "-Dcatalina.tmpdir=");
-
-            int jmxPort = configuration.getAttribute(ATTR_JMX_PORT, CobaltServer.DEFAULT_JMX_PORT);
-            vmArgs = appendVMArg(vmArgs, "-Dcom.sun.management.jmxremote", "-Dcom.sun.management.jmxremote");
-            vmArgs = appendVMArg(vmArgs, "-Dcom.sun.management.jmxremote.port=" + jmxPort,
-                                 "-Dcom.sun.management.jmxremote.port=");
-            vmArgs = appendVMArg(vmArgs, "-Dcom.sun.management.jmxremote.authenticate=false",
-                                 "-Dcom.sun.management.jmxremote.authenticate=");
-            vmArgs =
-                appendVMArg(vmArgs, "-Dcom.sun.management.jmxremote.ssl=false", "-Dcom.sun.management.jmxremote.ssl=");
-
-            File jacorbHome = new File(catalinaBase, "/conf/jacorb");
-            if (jacorbHome.exists()) {
-                try {
-                    String jacorbPath = jacorbHome.getCanonicalPath();
-                    vmArgs = appendVMArg(vmArgs, "-Djacorb.home=" + jacorbPath, "-Djacorb.home=");
-                    vmArgs =
-                        appendVMArg(vmArgs, "-Dorg.omg.CORBA.ORBClass=org.jacorb.orb.ORB", "-Dorg.omg.CORBA.ORBClass=");
-                    vmArgs = appendVMArg(vmArgs, "-Dorg.omg.CORBA.ORBSingletonClass=org.jacorb.orb.ORBSingleton",
-                                         "-Dorg.omg.CORBA.ORBSingletonClass=");
-                } catch (IOException ex) {
-                    String message = "Eval JacORB path error";
-                    Logger.log(Logger.ERROR, message, ex);
-                    CobaltSDKPlugin.warning(Messages.DefaultTitle, message + ".\n" + ex);
-                    return;
-                }
-            }
-
-            // TODO -Dorg.apache.el.parser.SKIP_IDENTIFIER_CHECK=true
-
-            // default: String pgmArgs = getProgramArguments(configuration);
-
-            pgmArgs += "start";
-        }
-        ExecutionArguments execArgs = new ExecutionArguments(vmArgs, pgmArgs);
-
-        // Environments
-        String[] envp = getEnvironment(configuration);
-        envp = setEnvironment(envp, runtimeConfigurationData.getCatalinaBasePath());
-
-        // VM-specific attributes
-        Map<String, Object> vmAttributesMap = getVMSpecificAttributesMap(configuration);
-
-        // Bootpath
-        String[] bootpath = getBootpath(configuration);
-
-        // Create VM config
-        String[] classpath = classpathList.toArray(new String[classpathList.size()]);
-        VMRunnerConfiguration runConfig = new VMRunnerConfiguration("org.apache.catalina.startup.Bootstrap", classpath);
-        runConfig.setProgramArguments(execArgs.getProgramArgumentsArray());
-        runConfig.setVMArguments(execArgs.getVMArgumentsArray());
-        runConfig.setWorkingDirectory(workFolderPath);
-        runConfig.setEnvironment(envp);
-        runConfig.setVMSpecificAttributesMap(vmAttributesMap);
-        if (bootpath != null && bootpath.length > 0) {
-            runConfig.setBootClassPath(bootpath);
-        }
-
-        // Source
-        setDefaultSourceLocator(launch, configuration);
-        ISourceLookupDirector sourceLookupDirector = (ISourceLookupDirector) launch.getSourceLocator();
-        List<ISourceContainer> launchSourceContainers =
-            new ArrayList<ISourceContainer>(Arrays.asList(sourceLookupDirector.getSourceContainers()));
-        for (ISourceContainer c : sourceContainers) {
-            if (!launchSourceContainers.contains(c))
-                launchSourceContainers.add(c);
-        }
-        sourceLookupDirector.setSourceContainers(launchSourceContainers
-                .toArray(new ISourceContainer[launchSourceContainers.size()]));
-
-        // Setup runner
-        IVMInstall vm = verifyVMInstall(configuration);
-        IVMRunner runner = vm.getVMRunner(launchMode);
-        if (runner == null) {
-            launchMode = ILaunchManager.RUN_MODE;
-            runner = vm.getVMRunner(ILaunchManager.RUN_MODE);
-        }
-
-        // Run
-        if (cobaltServer != null) {
-            cobaltServer.setupLaunch(launch, launchMode, monitor);
-            try {
-                runner.run(runConfig, launch, null);
-                cobaltServer.addProcessListener(launch.getProcesses()[0]);
-            } catch (Exception ex) {
-                cobaltServer.stopImpl();
-            }
-        } else {
-            runner.run(runConfig, launch, null);
         }
     }
 
