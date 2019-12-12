@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.eidosmedia.cobalt.eclipse.sdk.feature_1.0.1.qualifier.jar" id="com.eidosmedia.cobalt.eclipse.sdk.feature" version="1.0.1.qualifier">
+   <feature url="features/com.eidosmedia.cobalt.eclipse.sdk.feature_1.2.0.qualifier.jar" id="com.eidosmedia.cobalt.eclipse.sdk.feature" version="1.2.0.qualifier">
       <category name="Cobalt SDK"/>
    </feature>
    <category-def name="Cobalt SDK" label="com.eidosmedia.cobalt.eclipse.sdk.feature">
