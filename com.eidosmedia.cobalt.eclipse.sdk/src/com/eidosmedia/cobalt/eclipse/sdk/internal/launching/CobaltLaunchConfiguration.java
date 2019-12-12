@@ -322,6 +322,8 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
 
         String tomcatKeystoreFile = cobaltProperties.getProperty("tomcat.keystore.file");
         String tomcatKeystorePass = cobaltProperties.getProperty("tomcat.keystore.pass");
+        String tomcatKeyAlias = cobaltProperties.getProperty("tomcat.key.alias");
+        String tomcatKeyPass = cobaltProperties.getProperty("tomcat.key.pass");
 
         String tomcatPortServer = cobaltProperties.getProperty("ports.tomcat.server");
         String tomcatPortAjp = cobaltProperties.getProperty("ports.tomcat.ajp");
@@ -343,6 +345,11 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
             appendVMArg(vmArgs, "-Dtomcat.keystore.file=\"" + tomcatKeystoreFile + "\"", "-Dtomcat.keystore.file=");
         vmArgs =
             appendVMArg(vmArgs, "-Dtomcat.keystore.pass=\"" + tomcatKeystorePass + "\"", "-Dtomcat.keystore.pass=");
+        vmArgs =
+            appendVMArg(vmArgs, "-Dtomcat.key.alias=\"" + tomcatKeyAlias + "\"", "-Dtomcat.key.alias=");
+        vmArgs =
+            appendVMArg(vmArgs, "-Dtomcat.key.pass=\"" + tomcatKeyPass + "\"", "-Dtomcat.key.pass=");
+
 
         vmArgs = appendVMArg(vmArgs, "-Dtomcat.port.server=\"" + tomcatPortServer + "\"", "-Dtomcat.port.server=");
         vmArgs = appendVMArg(vmArgs, "-Dtomcat.port.ajp=\"" + tomcatPortAjp + "\"", "-Dtomcat.port.ajp=");
