@@ -126,14 +126,15 @@ public class CobaltServerBehaviour extends ServerBehaviourDelegate {
             File cobaltBaseSrc = new File(cobaltBase, "src");
             File serverSrc = new File(serverConfIPath.getFolder("src").getRawLocation().toOSString()).getCanonicalFile();
             
-            File cobaltHomeExtra = new File(cobaltHome, "extra");
+            //File cobaltHomeExtra = new File(cobaltHome, "extra");
             File cobaltBaseExtra = new File(cobaltBase, "extra");
+            File serverExtra = new File(serverConfIPath.getFolder("extra").getRawLocation().toOSString()).getCanonicalFile();
 
             if (!cobaltBase.equals(cobaltHome)) {
                 FileSystemSyncExecutor syncExecutor = new FileSystemSyncExecutor();
                 syncExecutor.sync(serverConf, cobaltBaseConf, monitor);
                 syncExecutor.sync(serverSrc, cobaltBaseSrc, monitor);
-                syncExecutor.sync(cobaltHomeExtra, cobaltBaseExtra, monitor);
+                syncExecutor.sync(serverExtra, cobaltBaseExtra, monitor);
             }
 
         } catch (Exception ex) {
