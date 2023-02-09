@@ -2,7 +2,7 @@
 <feature
       id="com.eidosmedia.cobalt.eclipse.sdk.feature"
       label="Cobalt SDK"
-      version="1.2.0"
+      version="1.2.1"
       provider-name="EidosMedia S.p.A.">
 
    <description url="http://www.example.com/description">
