@@ -302,7 +302,7 @@ public class CobaltLaunchConfiguration extends AbstractJavaLaunchConfigurationDe
         vmArgs = removeCRLF(getVMArguments(configuration));
         vmArgs = appendVMArg(vmArgs, "-server", "-server");
         // vmArgs = appendVMArg(vmArgs, "-Dfile.encoding=\"UTF-8\"", "-Dfile.encoding=");           
-        vmArgs = appendVMArg(vmArgs, "-Djava.endorsed.dirs=\"endorsed\"", "-Djava.endorsed.dirs=");
+        //vmArgs = appendVMArg(vmArgs, "-Djava.endorsed.dirs=\"endorsed\"", "-Djava.endorsed.dirs=");
         vmArgs = appendVMArg(vmArgs, "-XX:MaxPermSize=256m", "-XX:MaxPermSize=");
         vmArgs = appendVMArg(vmArgs, "-Xms512m", "-Xms\\d+[kKmM]?");
         vmArgs = appendVMArg(vmArgs, "-Xmx512m", "-Xmx\\d+[kKmM]?");
