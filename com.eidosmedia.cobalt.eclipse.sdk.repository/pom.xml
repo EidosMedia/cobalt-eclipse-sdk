@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.eidosmedia.cobalt.eclipse</groupId>
         <artifactId>plugins</artifactId>
-        <version>1.2.1</version>
+        <version>1.2.2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 </project>
